@@ -10,6 +10,10 @@ import os
 # External Libraries
 from Xlib import X, Xatom, display as Xdisplay, error as Xerror
 from xdg import BaseDirectory, DesktopEntry
+import xdg.Exceptions
+
+# Local Library
+from utilities import which
 
 
 class ApplicationNotFoundError(Exception):
@@ -31,6 +35,37 @@ def win_to_app(id):
 	"""Try to determine the .desktop file the X window ID given by `id`. 
 
 	Returns the full path on success; raises ApplicationNotFound on failure."""
+
+	# The list of .desktop files' relevant details. A list of dicts with keys "FullPath", "StartupWMClass", "Exec"
+	applications = []
+
+	## Load up all the .desktop files
+	for fullPath in get_xdg_application_files():
+
+		# Make sure this is a .desktop file
+		if not os.path.isfile(fullPath) or os.path.splitext(fullPath)[1].lower() != ".desktop":
+			continue
+
+		# Try to parse the desktop file; catching any exceptions
+		try:
+			entry = DesktopEntry.DesktopEntry(fullPath)
+		except xdg.Exceptions.Error:
+			continue
+
+		# Make sure this is an application and isn't hidden (which is equivalent to not existing at all), 
+		if entry.getType() != "Application" or entry.getHidden():
+			continue
+
+		# Test the `TryExec` key, if it exists
+		if entry.getTryExec() != "" and which(entry.getTryExec()) == None:
+			continue
+
+		# Add the relevant details to the list of applications
+		applications.append({
+			"FullPath": fullPath,
+			"StartupWMClass": entry.getStartupWMClass(),
+			"Exec": entry.getExec()
+			})
 
 	# Connect to the X server, letting any Xerror.DisplayError pass through
 	display = Xdisplay.Display()
