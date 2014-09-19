@@ -38,7 +38,7 @@ def get_xdg_application_files():
 def win_to_app(id):
 	"""Try to determine the .desktop file the X window ID given by `id`. 
 
-	Returns the full path on success; raises ApplicationNotFound on failure."""
+	Returns the full path on success; raises ApplicationNotFound on failure. May also raise Xerror.DisplayError."""
 
 	# The list of .desktop files' relevant details. A list of dicts with keys "FullPath", "StartupWMClass", "Exec"
 	applications = []
