@@ -16,6 +16,10 @@ import xdg.Exceptions
 from utilities import which
 
 
+class GenericError(Exception):
+	"""A generic exception"""
+	pass
+
 class ApplicationNotFoundError(Exception):
 	"""The exception raised when a the .desktop file for a given window ID could not be found."""
 	pass
@@ -82,17 +86,19 @@ def win_to_app(id):
 		atom = display.intern_atom("_NET_WM_PID",True)
 
 		# Make sure the atom corresponding to _NET_WM_PID exists already. It really should.
-		assert atom != X.NONE
+		if atom == X.NONE:
+			raise GenericError
 
 		# Get the property response, using the type Xatom.CARDINAL
 		# This is a Xlib.protocol.request.GetProperty object, derived from Xlib.protocol.rq.ReplyRequest. See http://svad.uk/e/
 		response = window.get_full_property(atom,Xatom.CARDINAL) 
 
 		 # If the application isn't well behaved, then the _NET_WM_PID won't be set :(
-		assert response != None
+		if response == None:
+			raise GenericError
 
 		# Otherwise, yay!
 		pid = int(response.value[0])
 
-	except AssertError:
+	except GenericError:
 		pid = None
