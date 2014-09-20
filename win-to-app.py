@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 """Tries to determine the .desktop file for a given X window ID."""
 
@@ -22,8 +22,7 @@ class GenericError(Exception):
 
 class XServerError(Exception):
 	"""An exception raised when there's a problem with the X Server"""
-	def __init__(self,error):
-		self.error = error
+	pass
 
 class ApplicationNotFoundError(Exception):
 	"""The exception raised when a the .desktop file for a given window ID could not be found."""
@@ -78,7 +77,7 @@ class WinToApp:
 		try:
 			self.display = Xdisplay.Display()
 		except Xerror.DisplayError as exception:
-			raise Xerror.DisplayError
+			raise XServerError from exception
 
 
 	def _get_xdg_application_files(self):
