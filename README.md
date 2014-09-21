@@ -1,5 +1,5 @@
-Window to Application
-=====================
+Window to Application (WIP)
+===========================
 
 Try to determine the location of the `.desktop` file associated with an X window.
 
