@@ -82,11 +82,15 @@ class WinToApp:
 
 	def _get_xdg_application_files(self):
 		"""Provide a list of the application files, with full paths.
+
 		Specification: http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html"""
+
 		files = []
+
 		# Loop over the directories in $XDG_DATA_DIRS (essentially; see xdg doc for info)
 		for directory in BaseDirectory.load_data_paths("applications"):
 			files.extend([os.path.join(directory,filename) for filename in os.listdir(directory)])
+
 		return files
 
 
@@ -95,16 +99,43 @@ class WinToApp:
 
 		Returns the full path on success; raises ApplicationNotFound on failure."""
 
+		# The collection of matching application paths
+		matchingApps = []
+
 		# Create a resource for the window given by `id`
-		window = self.display.create_resource_object(int(id,0))
+		window = self.display.create_resource_object("window",id)
 
 		# TODO: Check if that is a valid window
 
-		## Get the PID associated with the window using _NET_WM_PID, if it is well behaved
+		## Get the WM_CLASS associated with the window
+		try:
+
+			# Intern the atom named 'WM_CLASS'
+			atom = self.display.intern_atom("WM_CLASS",True)
+
+			# Make sure the atom corresponding to WM_CLASS exists already. It really should.
+			if atom == X.NONE:
+				raise GenericError
+
+			# Get the property response, using the type Xatom.STRING
+			# This is a Xlib.protocol.request.GetProperty object, derived from Xlib.protocol.rq.ReplyRequest. See http://svad.uk/e/
+			response = window.get_full_property(atom,Xatom.STRING) 
+
+			 # If the application isn't well behaved, then the WM_CLASS won't be set :(
+			if response == None:
+				raise GenericError
+
+			# Otherwise, obtain all the WM_CLASSes: they arrive separated by \x00
+			wmClasses = response.value.strip("\x00").split("\x00")
+
+		except GenericError:
+			wmClasses = []
+
+		## Get the command associated with the window using _NET_WM_PID; if possible
 		try:
 
 			# Intern the atom named '_NET_WM_PID'
-			atom = display.intern_atom("_NET_WM_PID",True)
+			atom = self.display.intern_atom("_NET_WM_PID",True)
 
 			# Make sure the atom corresponding to _NET_WM_PID exists already. It really should.
 			if atom == X.NONE:
@@ -119,7 +150,20 @@ class WinToApp:
 				raise GenericError
 
 			# Otherwise, yay!
-			pid = int(response.value[0])
+			pid = str(response.value[0])
+
+			# Finally look up the command in the process list (probably not Windows compatable!)
+			with open("/proc/"+pid+"/comm") as f:
+				command = f.readline().strip()
 
 		except GenericError:
-			pid = None
+			command = None
+
+		# Loop over all the applications, checking for matches
+		for appDict in self.applications:
+			# Check if the WM_CLASS matches the StartupWMClass. This is the golden standard.
+			if appDict["StartupWMClass"] != "" and appDict["StartupWMClass"] in wmClasses:
+				matchingApps.append(appDict["FullPath"])
+			# Check if the WM_CLASS matches the name of the .desktop file
+			if os.path.splitext(os.path.basename(appDict["FullPath"]))[0] in wmClasses:
+				matchingApps.append(appDict["FullPath"])
