@@ -50,7 +50,7 @@ Check out the `examples` directory for a sample scripts. There's a further READM
 Exceptions
 ----------
 
-Raises `XServerError` if there's a problem with the X Server (the original exception will be [chained](http://legacy.python.org/dev/peps/pep-3134/) on).
+A `BadWindowIdError` gets raised if a supplied window ID doesn't work. Also a `XServerError` gets raised if there's a problem with the X Server (the original exception will be [chained](http://legacy.python.org/dev/peps/pep-3134/) on).
 
 
 Notes

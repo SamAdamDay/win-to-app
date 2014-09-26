@@ -20,6 +20,10 @@ class GenericError(Exception):
 	"""A generic exception"""
 	pass
 
+class BadWindowIdError(Exception):
+	"""An exception raised when the window id doesn't work"""
+	pass
+
 class XServerError(Exception):
 	"""An exception raised when there's a problem with the X Server"""
 	pass
@@ -103,7 +107,8 @@ class WinToApp:
 	def from_id(self,id):
 		"""Try to determine the .desktop file the X window ID given by `id`. 
 
-		Returns a list of the matching application full paths, ordered by how likely they are to match."""
+		Return a list of the matching application full paths, ordered by how likely they are to match.
+		Raise BadWindowIdError if the ID is not good."""
 
 		# The collection of matching application paths
 		matchingApps = AppCollection()
@@ -111,7 +116,12 @@ class WinToApp:
 		# Create a resource for the window given by `id`
 		window = self.display.create_resource_object("window",id)
 
-		# TODO: Check if that is a valid window
+		# Check if this is a valid window by sending a simple request and catching any XEerror.BadWindow exceptions
+		# There's probably a better way of doing this, but the Python Xlib docs are too poor for me to be bothered to figure it out
+		try:
+			window.list_properties()
+		except Xerror.BadWindow:
+			raise BadWindowIdError
 
 		## Get the WM_CLASS associated with the window
 		try:
