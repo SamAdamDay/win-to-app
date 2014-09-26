@@ -7,7 +7,7 @@ Try to determine the location of the `.desktop` file associated with an X window
 Usage
 -----
 
-    import wintoapp
+    from wintoapp import WinToApp
 
     # Initialise the object
     wta = WinToApp()

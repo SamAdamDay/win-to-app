@@ -39,11 +39,11 @@ class WinToApp:
 	"""
 
 	# Application matching criteria relevances
-	self.REL_STARTUP = 100 # The WM_CLASS matches the StartupWMClass
-	self.REL_WM_FILE = 90 # The WM_CLASS matches the filename
-	self.REL_WM_FILE_DOT = 80 # The WM_CLASS without dots matches the filename
-	self.REL_COMM = 70 # The process name matches the Exec field
-	self.REL_CMDLINE = 60 # The command matches the Exec field
+	REL_STARTUP = 100 # The WM_CLASS matches the StartupWMClass
+	REL_WM_FILE = 90 # The WM_CLASS matches the filename
+	REL_WM_FILE_DOT = 80 # The WM_CLASS without dots matches the filename
+	REL_COMM = 70 # The process name matches the Exec field
+	REL_CMDLINE = 60 # The command matches the Exec field
 
 	def __init__(self):
 		"""Load up the applications and connect to the X Server"""
@@ -137,6 +137,8 @@ class WinToApp:
 		except GenericError:
 			wmClasses = []
 
+		print(wmClasses)
+
 		## Get the process name and command associated with the window using _NET_WM_PID; if possible
 		try:
 
@@ -163,33 +165,36 @@ class WinToApp:
 				with open("/proc/"+pid+"/comm") as f:
 					comm = f.readline().strip()
 			except IOError:
-				raise comm = None
+				comm = None
 			try:
 				with open("/proc/"+pid+"/cmdline") as f:
 					cmdline = f.readline().strip()
 			except IOError:
-				raise cmdline = None
+				cmdline = None
 
 		except GenericError:
 			comm, cmdline = None, None
+
+		print(comm)
+		print(cmdline)
 
 		# Loop over all the applications, checking for matches
 		for appDict in self.applications:
 			# Check if the WM_CLASS matches the StartupWMClass. This is the golden standard.
 			if appDict["StartupWMClass"] != "" and appDict["StartupWMClass"] in wmClasses:
-				matchingApps.append(appDict["FullPath"]self.REL_STARTUP)
+				matchingApps.append(appDict["FullPath"],self.REL_STARTUP)
 			# Check if the WM_CLASS matches the name of the .desktop file
 			if os.path.splitext(os.path.basename(appDict["FullPath"]))[0] in wmClasses:
-				matchingApps.append(appDict["FullPath"]self.REL_WM_FILE)
+				matchingApps.append(appDict["FullPath"],self.REL_WM_FILE)
 			# Check if the WM_CLASS without '.' characters matches the name of the .desktop file 
 			if os.path.splitext(os.path.basename(appDict["FullPath"]))[0] in [c.replace(".","") for c in wmClasses]:
-				matchingApps.append(appDict["FullPath"]self.REL_WM_FILE_DOT)
+				matchingApps.append(appDict["FullPath"],self.REL_WM_FILE_DOT)
 			# Check if the process name matches the Exec field
-			if comm == appDict["Exec"]
-				matchingApps.append(appDict["FullPath"]self.REL_COMM)
+			if comm == appDict["Exec"]:
+				matchingApps.append(appDict["FullPath"],self.REL_COMM)
 			# Check if the command line matches the Exec field
-			if cmdline == appDict["Exec"]
-				matchingApps.append(appDict["FullPath"]self.REL_CMDLINE)
+			if cmdline == appDict["Exec"]:
+				matchingApps.append(appDict["FullPath"],self.REL_CMDLINE)
 
 		# Finally, return the list of applications sorted by relevance
 		return matchingApps.getList()
@@ -213,11 +218,11 @@ class AppCollection:
 		# Discriminate based on whether the path is in already
 		if fullPath in self._data:
 			self._data[fullPath] = max(self._data[fullPath],relevance)
-		else
+		else:
 			self._data[fullPath] = relevance
 
 	def getList(self):
 		"""Return a list of all full paths, ordered by relevance."""
 
 		# A fancy one-liner, sacrificing readability for coolness
-		return sorted(self._data.items(), key = lambda i: i[1], reverse=True).keys()
+		return [i[0] for i in sorted(self._data.items(), key = lambda i: i[1], reverse=True)]
