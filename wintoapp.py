@@ -24,20 +24,26 @@ class XServerError(Exception):
 	"""An exception raised when there's a problem with the X Server"""
 	pass
 
-class ApplicationNotFoundError(Exception):
-	"""The exception raised when a the .desktop file for a given window ID could not be found."""
-	pass
-
 
 class WinToApp:
 	"""The main class for handling window to application requests.
 
 	Usage:
 
+		# Initialise the object
 	    wta = WinToApp()
-	    applicationPath = wta.from_id(windowId)
+	    # Get all the matching application paths
+	    matchingPaths = wta.from_id(windowId)
+	    # Grab the most likely match
+	    applicationPath = paths[0]
 	"""
 
+	# Application matching criteria relevances
+	self.REL_STARTUP = 100 # The WM_CLASS matches the StartupWMClass
+	self.REL_WM_FILE = 90 # The WM_CLASS matches the filename
+	self.REL_WM_FILE_DOT = 80 # The WM_CLASS without dots matches the filename
+	self.REL_COMM = 70 # The process name matches the Exec field
+	self.REL_CMDLINE = 60 # The command matches the Exec field
 
 	def __init__(self):
 		"""Load up the applications and connect to the X Server"""
@@ -73,7 +79,7 @@ class WinToApp:
 				"Exec": entry.getExec()
 				})
 
-		# Connect to the X server, letting any Xerror.DisplayError pass through
+		# Connect to the X server, re-raising any Xerror.DisplayError
 		try:
 			self.display = Xdisplay.Display()
 		except Xerror.DisplayError as exception:
@@ -97,10 +103,10 @@ class WinToApp:
 	def from_id(self,id):
 		"""Try to determine the .desktop file the X window ID given by `id`. 
 
-		Returns the full path on success; raises ApplicationNotFound on failure."""
+		Returns a list of the matching application full paths, ordered by how likely they are to match."""
 
 		# The collection of matching application paths
-		matchingApps = []
+		matchingApps = AppCollection()
 
 		# Create a resource for the window given by `id`
 		window = self.display.create_resource_object("window",id)
@@ -131,7 +137,7 @@ class WinToApp:
 		except GenericError:
 			wmClasses = []
 
-		## Get the command associated with the window using _NET_WM_PID; if possible
+		## Get the process name and command associated with the window using _NET_WM_PID; if possible
 		try:
 
 			# Intern the atom named '_NET_WM_PID'
@@ -152,18 +158,66 @@ class WinToApp:
 			# Otherwise, yay!
 			pid = str(response.value[0])
 
-			# Finally look up the command in the process list (probably not Windows compatable!)
-			with open("/proc/"+pid+"/comm") as f:
-				command = f.readline().strip()
+			# Finallly, try to look up the process name and command in the process list (probably not Windows compatable!)
+			try:
+				with open("/proc/"+pid+"/comm") as f:
+					comm = f.readline().strip()
+			except IOError:
+				raise comm = None
+			try:
+				with open("/proc/"+pid+"/cmdline") as f:
+					cmdline = f.readline().strip()
+			except IOError:
+				raise cmdline = None
 
 		except GenericError:
-			command = None
+			comm, cmdline = None, None
 
 		# Loop over all the applications, checking for matches
 		for appDict in self.applications:
 			# Check if the WM_CLASS matches the StartupWMClass. This is the golden standard.
 			if appDict["StartupWMClass"] != "" and appDict["StartupWMClass"] in wmClasses:
-				matchingApps.append(appDict["FullPath"])
+				matchingApps.append(appDict["FullPath"]self.REL_STARTUP)
 			# Check if the WM_CLASS matches the name of the .desktop file
 			if os.path.splitext(os.path.basename(appDict["FullPath"]))[0] in wmClasses:
-				matchingApps.append(appDict["FullPath"])
+				matchingApps.append(appDict["FullPath"]self.REL_WM_FILE)
+			# Check if the WM_CLASS without '.' characters matches the name of the .desktop file 
+			if os.path.splitext(os.path.basename(appDict["FullPath"]))[0] in [c.replace(".","") for c in wmClasses]:
+				matchingApps.append(appDict["FullPath"]self.REL_WM_FILE_DOT)
+			# Check if the process name matches the Exec field
+			if comm == appDict["Exec"]
+				matchingApps.append(appDict["FullPath"]self.REL_COMM)
+			# Check if the command line matches the Exec field
+			if cmdline == appDict["Exec"]
+				matchingApps.append(appDict["FullPath"]self.REL_CMDLINE)
+
+		# Finally, return the list of applications sorted by relevance
+		return matchingApps.getList()
+
+
+class AppCollection:
+	"""A collection of full paths for applications files (.desktop).
+
+	This is used to store the matching apps for a given window, weighted by relevance.
+	Adding an application that is already present causes the corresponding relevance to be maxed."""
+
+	def __init__(self):
+		"""Initialise the class."""
+
+		# The actual data, a dict of <FullPath>:<Relevance>
+		self._data = {}
+
+	def append(self,fullPath,relevance):
+		"""Add an application path, maxing the relevance if it already exists."""
+
+		# Discriminate based on whether the path is in already
+		if fullPath in self._data:
+			self._data[fullPath] = max(self._data[fullPath],relevance)
+		else
+			self._data[fullPath] = relevance
+
+	def getList(self):
+		"""Return a list of all full paths, ordered by relevance."""
+
+		# A fancy one-liner, sacrificing readability for coolness
+		return sorted(self._data.items(), key = lambda i: i[1], reverse=True).keys()

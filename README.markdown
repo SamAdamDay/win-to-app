@@ -8,14 +8,21 @@ Usage
 -----
 
     import wintoapp
-    wta = wintoapp.WinToApp()
-    applicationPath = wta.from_id(windowId)
+
+    # Initialise the object
+    wta = WinToApp()
+
+    # Get all the matching application paths
+    matchingPaths = wta.from_id(windowId)
+
+    # Grab the most likely match
+    applicationPath = paths[0]
 
 
 Exceptions
 ----------
 
-Raises `ApplicationNotFoundError` if it can't find an application for the given window, and `XServerError` if there's a problem with the X Server (the original exception will be [chained](http://legacy.python.org/dev/peps/pep-3134/) on).
+Raises `XServerError` if there's a problem with the X Server (the original exception will be [chained](http://legacy.python.org/dev/peps/pep-3134/) on).
 
 
 Requirements
