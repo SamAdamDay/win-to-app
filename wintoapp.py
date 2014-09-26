@@ -137,7 +137,7 @@ class WinToApp:
 		except GenericError:
 			wmClasses = []
 
-		print(wmClasses)
+		wmClassesLower = map(str.lower,wmClasses)
 
 		## Get the process name and command associated with the window using _NET_WM_PID; if possible
 		try:
@@ -175,25 +175,22 @@ class WinToApp:
 		except GenericError:
 			comm, cmdline = None, None
 
-		print(comm)
-		print(cmdline)
-
 		# Loop over all the applications, checking for matches
 		for appDict in self.applications:
 			# Check if the WM_CLASS matches the StartupWMClass. This is the golden standard.
-			if appDict["StartupWMClass"] != "" and appDict["StartupWMClass"] in wmClasses:
+			if appDict["StartupWMClass"] != "" and appDict["StartupWMClass"].lower() in wmClassesLower:
 				matchingApps.append(appDict["FullPath"],self.REL_STARTUP)
 			# Check if the WM_CLASS matches the name of the .desktop file
-			if os.path.splitext(os.path.basename(appDict["FullPath"]))[0] in wmClasses:
+			if os.path.splitext(os.path.basename(appDict["FullPath"]))[0].lower() in wmClassesLower:
 				matchingApps.append(appDict["FullPath"],self.REL_WM_FILE)
 			# Check if the WM_CLASS without '.' characters matches the name of the .desktop file 
-			if os.path.splitext(os.path.basename(appDict["FullPath"]))[0] in [c.replace(".","") for c in wmClasses]:
+			if os.path.splitext(os.path.basename(appDict["FullPath"]))[0].lower() in [c.replace(".","") for c in wmClassesLower]:
 				matchingApps.append(appDict["FullPath"],self.REL_WM_FILE_DOT)
-			# Check if the process name matches the Exec field
-			if comm == appDict["Exec"]:
+			# Check if the process name matches the Exec field; with some variations
+			if comm == appDict["Exec"] or appDict["Exec"].find(comm) == 0 or os.path.basename(comm) == appDict["Exec"] or appDict["Exec"].find(os.path.basename(comm)) == 0:
 				matchingApps.append(appDict["FullPath"],self.REL_COMM)
 			# Check if the command line matches the Exec field
-			if cmdline == appDict["Exec"]:
+			if cmdline == appDict["Exec"] or appDict["Exec"].find(cmdline) == 0 or os.path.basename(cmdline) == appDict["Exec"] or appDict["Exec"].find(os.path.basename(cmdline)) == 0:
 				matchingApps.append(appDict["FullPath"],self.REL_CMDLINE)
 
 		# Finally, return the list of applications sorted by relevance
