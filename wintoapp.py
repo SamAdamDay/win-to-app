@@ -137,7 +137,7 @@ class WinToApp:
 		except GenericError:
 			wmClasses = []
 
-		wmClassesLower = map(str.lower,wmClasses)
+		wmClassesLower = [c.lower() for c in wmClasses]
 
 		## Get the process name and command associated with the window using _NET_WM_PID; if possible
 		try:
