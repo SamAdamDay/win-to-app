@@ -33,18 +33,24 @@ The solution (workaround), is to use several different methods of matching windo
 One thing for which this matching alogrithm is useful is in determining the correct icon associated with a window.
 
 
-Exceptions
-----------
-
-Raises `XServerError` if there's a problem with the X Server (the original exception will be [chained](http://legacy.python.org/dev/peps/pep-3134/) on).
-
-
 Requirements
 ------------
 
 - Python 3
 - [PyXDG](http://freedesktop.org/wiki/Software/pyxdg/)
 - [Python 3 Xlib](https://github.com/LiuLang/python3-xlib)
+
+
+Example Scripts
+---------------
+
+Check out the `examples` directory for a sample scripts. There's a further README in there.
+
+
+Exceptions
+----------
+
+Raises `XServerError` if there's a problem with the X Server (the original exception will be [chained](http://legacy.python.org/dev/peps/pep-3134/) on).
 
 
 Notes
